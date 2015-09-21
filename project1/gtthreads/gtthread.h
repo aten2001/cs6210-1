@@ -4,7 +4,30 @@
 #include "steque.h"
 #include <ucontext.h>
 
+#define bool int
+#define true 1
+#define false 0
+
 /* Define gtthread_t and gtthread_mutex_t types here */
+
+/* structure for the details of a gtthread_t*/
+typedef struct gtthread_id{
+  int thread_id;
+  ucontext_t thread_context;
+  void* return_value;
+  bool cancelled;
+  bool finished;
+  int joined_thread_id;
+}gtthread_t;
+
+/* structure for the details of a gtthread_mutex_t */
+typedef struct gtthread_mutex_t {
+  steque_t queue; 
+  bool locked;
+  int locked_thread_id;
+} gtthread_mutex_t;
+
+extern gtthread_t * current_thread;
 
 void gtthread_init(long period);
 int  gtthread_create(gtthread_t *thread,
