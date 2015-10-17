@@ -44,16 +44,16 @@
 */
 typedef struct _treenode_t{
   int parentsense;
+  int sense;
   int * parentpointer;
   int * childpointers[2];
   int havechild[4];
-  int childnotready[4];
-  int dummy;
-  int sense;
+  int childnotready[4];  
   
 }treenode_t;
 
 static treenode_t *nodes;
+static int dummy;
 
 void gtmp_init(int num_threads){
   int i;
@@ -61,6 +61,8 @@ void gtmp_init(int num_threads){
 
   /* Setting up the tree */
   nodes = (treenode_t*) malloc(num_threads * sizeof(treenode_t));
+  
+  dummy = -1;
 
   for(i = 0; i < num_threads; i++) {
     for(j = 0; j < 4; j++) {
@@ -72,11 +74,13 @@ void gtmp_init(int num_threads){
      nodes[i].childnotready[j] = nodes[i].havechild[j];
 	}
   
-	  nodes[i].parentpointer = (i != 0) ? &nodes[(int)((i-1)/4)].childnotready[(i-1) % 4] : &nodes[i].dummy;
-	  nodes[i].childpointers[0] = (2*i+1 < num_threads) ? &nodes[2*1+1].parentsense : &nodes[i].dummy;
-	  nodes[i].childpointers[1] = (2*i+2 < num_threads) ? &nodes[2*i+2].parentsense : &nodes[i].dummy;
+	  nodes[i].parentpointer = (i != 0) ? &nodes[(int)((i-1)/4)].childnotready[(i-1) % 4] : &dummy;
+	  nodes[i].childpointers[0] = (2*i+1 < num_threads) ? &nodes[2*i+1].parentsense : &dummy;
+	  nodes[i].childpointers[1] = (2*i+2 < num_threads) ? &nodes[2*i+2].parentsense : &dummy;
 	  nodes[i].parentsense = 0;
 	  nodes[i].sense = 1;
+	  
+	
 
   }
  
@@ -84,27 +88,29 @@ void gtmp_init(int num_threads){
 
 void gtmp_barrier(){
    int i;
+   int vpid = omp_get_thread_num();
+   
    
    for(i = 0; i < 4; i++){
-	while(nodes[omp_get_thread_num()].childnotready[i] != 0){
+	while(nodes[vpid].childnotready[i] != 0){
         }
    }
 
    int j;
 
    for(j = 0; j < 4; j++){
-	nodes[omp_get_thread_num()].childnotready[j] = nodes[omp_get_thread_num()].havechild[j];
+	nodes[vpid].childnotready[j] = nodes[vpid].havechild[j];
    }
 
-   *nodes[omp_get_thread_num()].parentpointer = 0;
+   *nodes[vpid].parentpointer = 0;
 
-   if(omp_get_thread_num() != 0){
-          while(nodes[omp_get_thread_num()].parentsense != nodes[omp_get_thread_num()].sense){
+   if(vpid != 0){
+          while(nodes[vpid].parentsense != nodes[vpid].sense){
           }
    }
-   *nodes[omp_get_thread_num()].childpointers[0] = nodes[omp_get_thread_num()].sense;
-   *nodes[omp_get_thread_num()].childpointers[1] = nodes[omp_get_thread_num()].sense;
-   nodes[omp_get_thread_num()].sense = !nodes[omp_get_thread_num()].sense;
+   *nodes[vpid].childpointers[0] = nodes[vpid].sense;
+   *nodes[vpid].childpointers[1] = nodes[vpid].sense;
+   nodes[vpid].sense = !nodes[vpid].sense;
 
 }
 
